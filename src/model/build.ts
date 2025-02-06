@@ -6,10 +6,16 @@ import {
 } from "../constants/constants";
 import { APP_DATA } from "../constants/data";
 import { Ambient, AmbientInterface } from "./ambient";
-import { Apartment } from "./apartment";
-import { ApartmentWall } from "./apartmentWall";
+import { Apartment, WallImplementationInterface } from "./apartment";
+import { ApartmentWall, ApartmentWallInterface } from "./apartmentWall";
 import { PeopleActivity } from "./peopleActivity";
 import { Wall } from "./wall";
+import { getApartmentTemperatureWithActivities } from "../utils/apartment";
+
+interface Neighborhood {
+  apartments: Apartment[];
+  externalTemperature: number;
+}
 
 export class Building {
   id: string;
@@ -68,7 +74,7 @@ export class Building {
           });
 
           // Initialize walls
-          this.initializeWall(
+          apartments[z][i][j] = this.initializeWall(
             currentApartment,
             apartments,
             z,
@@ -92,7 +98,7 @@ export class Building {
     j: number,
     wallConstant: Wall,
     floorConstant: Wall
-  ): void {
+  ) {
     const numFloors = apartments.length;
     const numRows = apartments[0].length;
     const numCols = apartments[0][0].length;
@@ -105,8 +111,10 @@ export class Building {
         wallConstant,
         WallType.WALL
       );
+      currentApartment.neighbors.right = rightNeighbor.id;
       currentApartment.walls.right = apartmentWall;
       rightNeighbor.walls.left = apartmentWall;
+      rightNeighbor.neighbors.right = currentApartment.id;
     }
 
     // Wall at the back
@@ -117,8 +125,10 @@ export class Building {
         wallConstant,
         WallType.WALL
       );
+      currentApartment.neighbors.back = backNeighbor.id;
       currentApartment.walls.back = apartmentWall;
       backNeighbor.walls.front = apartmentWall;
+      backNeighbor.neighbors.back = currentApartment.id;
     }
 
     // Ceiling
@@ -129,174 +139,94 @@ export class Building {
         floorConstant,
         WallType.FLOOR_CEILING
       );
+      currentApartment.neighbors.ceiling = ceilingNeighbor.id;
       currentApartment.walls.ceiling = apartmentWall;
       ceilingNeighbor.walls.floor = apartmentWall;
-    }
-  }
-
-  calculateTemperaturesForTime(
-    t: number,
-    externalTemperature: number,
-    apartments: Apartment[][][]
-  ) {
-    for (let z = 0; z < apartments.length; z++) {
-      for (let i = 0; i < apartments[z].length; i++) {
-        for (let j = 0; j < apartments[z][i].length; j++) {
-          const apartment = apartments[z][i][j];
-          apartment.calculateInternalTemperature(externalTemperature, t);
-          apartments[z][i][j].temperature =
-            apartment.calculateTemperatureWithActivities(
-              externalTemperature,
-              t
-            );
-        }
-      }
+      ceilingNeighbor.neighbors.ceiling = currentApartment.id;
     }
 
-    // Propagate heat to neighboring apartments
-    return this.propagateHeat(apartments, t);
+    return currentApartment;
   }
 
-  private propagateHeat(apartments: Apartment[][][], time: number) {
-    const deltas = new Map<string, number>();
-
-    // Calcular todos los cambios primero
-    for (let z = 0; z < apartments.length; z++) {
-      for (let i = 0; i < apartments[z].length; i++) {
-        for (let j = 0; j < apartments[z][i].length; j++) {
-          const apartment = apartments[z][i][j];
-          const neighbors = this.getNeighbors(apartments, z, i, j);
-
-          neighbors.forEach((neighbor) => {
-            const { sourceDelta, targetDelta } = this.calculateHeatTransfer(
-              apartment,
-              neighbor,
-              time
-            );
-
-            // Acumular cambios para evitar interferencias
-            deltas.set(
-              apartment.id,
-              (deltas.get(apartment.id) || 0) + sourceDelta
-            );
-            deltas.set(
-              neighbor.id,
-              (deltas.get(neighbor.id) || 0) + targetDelta
-            );
-          });
-        }
-      }
-    }
-
-    // Aplicar cambios acumulados
-    deltas.forEach((delta, apartmentId) => {
-      const apartment = this.findApartmentById(apartments, apartmentId);
-      if (apartment) {
-        apartment.temperature += delta;
-      }
-    });
-
-    return apartments;
-  }
-
-  // Función auxiliar para encontrar un apartamento por ID
-  private findApartmentById(
-    apartments: Apartment[][][],
-    id: string
-  ): Apartment | undefined {
-    for (const floor of apartments) {
+  caclulateApartmentsTemperature(
+    apartaments: Apartment[][][],
+    externalTemperature: number
+  ): Apartment[][][] {
+    const neighborhoodApartments: Apartment[] = [];
+    for (const floor of apartaments) {
       for (const row of floor) {
         for (const apartment of row) {
-          if (apartment.id === id) {
-            return apartment;
-          }
+          const { temperature, residents } =
+            getApartmentTemperatureWithActivities(apartment);
+          apartment.temperature = temperature;
+          apartment.residents = residents;
+          neighborhoodApartments.push(apartment);
         }
       }
     }
-    return undefined;
+
+    const neighborhood: Neighborhood = {
+      apartments: neighborhoodApartments,
+      externalTemperature,
+    };
+
+    console.log(
+      this.propagateTemperature(externalTemperature, neighborhood, 600)
+    );
+
+    return apartaments;
   }
 
-  // Función auxiliar para obtener vecinos
-  private getNeighbors(
-    apartments: Apartment[][][],
-    z: number,
-    i: number,
-    j: number
+  propagateTemperature(
+    externalTemperature: number,
+    neighborhood: Neighborhood,
+    timeStep: number
   ): Apartment[] {
-    const neighbors: Apartment[] = [];
-    const directions = [
-      { z, i: i - 1, j }, // Front
-      { z, i: i + 1, j }, // Back
-      { z, i, j: j - 1 }, // Left
-      { z, i, j: j + 1 }, // Right
-      { z: z - 1, i, j }, // Floor
-      { z: z + 1, i, j }, // Ceiling
-    ];
+    const specificHeatCapacity = 1005; // J/kg·K, para aire
+    const airDensity = 1.225; // kg/m³, para aire
+    const roomVolume = 100; // Volumen asumido para simplificación
 
-    directions.forEach((dir) => {
-      if (
-        dir.z >= 0 &&
-        dir.z < apartments.length &&
-        dir.i >= 0 &&
-        dir.i < apartments[0].length &&
-        dir.j >= 0 &&
-        dir.j < apartments[0][0].length
-      ) {
-        neighbors.push(apartments[dir.z][dir.i][dir.j]);
+    neighborhood.apartments.forEach((apartment) => {
+      let netHeatTransfer = 0;
+
+      // Calcular transferencia de calor con el ambiente externo
+      for (const [direction, wall] of Object.entries(apartment.walls)) {
+        const externalHeatTransfer =
+          wall.wall.material.coeficienteConductividad *
+          (neighborhood.externalTemperature - apartment.temperature);
+        netHeatTransfer += externalHeatTransfer;
       }
+
+      // Calcular transferencia de calor con los apartamentos vecinos
+      for (const [direction, neighborId] of Object.entries(
+        apartment.neighbors
+      )) {
+        const neighboringApartment = neighborhood.apartments.find(
+          (ap) => ap.id === neighborId
+        );
+        if (neighboringApartment && !isNaN(neighboringApartment.temperature)) {
+          const wall =
+            apartment.walls[direction as keyof WallImplementationInterface];
+          const neighborHeatTransfer =
+            wall.wall.material.coeficienteConductividad *
+            (neighboringApartment.temperature - apartment.temperature);
+          netHeatTransfer += neighborHeatTransfer;
+        } else {
+          const neighborHeatTransfer =
+            apartment.walls.floor.wall.material.coeficienteConductividad *
+            (externalTemperature - apartment.temperature);
+          netHeatTransfer += neighborHeatTransfer;
+        }
+      }
+
+      // Actualizar temperatura interna del apartamento considerando el neto de transferencia de calor
+      const deltaT =
+        (netHeatTransfer * timeStep) /
+        (specificHeatCapacity * roomVolume * airDensity);
+      apartment.temperature += deltaT;
     });
 
-    return neighbors;
-  }
-
-  private calculateHeatTransfer(
-    source: Apartment,
-    target: Apartment,
-    time: number
-  ): { sourceDelta: number; targetDelta: number } {
-    // 1. Encontrar la pared compartida (vertical u horizontal)
-    const sharedWall = this.findSharedWall(source, target);
-    if (!sharedWall) return { sourceDelta: 0, targetDelta: 0 };
-
-    // 2. Calcular diferencia de temperatura
-    const deltaTemp = source.temperature - target.temperature;
-    if (deltaTemp === 0) return { sourceDelta: 0, targetDelta: 0 };
-
-    // 3. Parámetros de la pared
-    const k = sharedWall.wall.material.coeficienteConductividad;
-    const A = sharedWall.area; // Área ya calculada según tipo de pared
-    const d = sharedWall.wall.thickness;
-    const t = time;
-
-    // 4. Calcular calor transferido (Q)
-    const Q = (k * A * Math.abs(deltaTemp) * t) / d;
-    const QDirection = deltaTemp > 0 ? Q : -Q; // Dirección del flujo
-
-    // 5. Calcular masa térmica de ambos apartamentos
-    const sourceThermalMass =
-      source.volume * AIR_DENSITY * SPECIFIC_HEAT_CAPACITY;
-    const targetThermalMass =
-      target.volume * AIR_DENSITY * SPECIFIC_HEAT_CAPACITY;
-
-    // 6. Calcular cambios de temperatura
-    const sourceDelta = -QDirection / sourceThermalMass; // Fuente pierde calor
-    const targetDelta = QDirection / targetThermalMass; // Vecino gana calor
-
-    return { sourceDelta, targetDelta };
-  }
-
-  // Función auxiliar para encontrar la pared compartida
-  private findSharedWall(
-    source: Apartment,
-    target: Apartment
-  ): ApartmentWall | null {
-    const walls = Object.values(source.walls) as ApartmentWall[];
-    for (const wall of walls) {
-      if (wall && wall.apartments.includes(target.id)) {
-        return wall;
-      }
-    }
-    return null;
+    return neighborhood.apartments;
   }
 }
 

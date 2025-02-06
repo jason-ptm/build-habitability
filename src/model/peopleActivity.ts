@@ -8,6 +8,7 @@ export class PeopleActivity {
   endTime: string;
   status: ActivityStatusEnum;
   activity: Activity;
+  calculed: boolean = false;
 
   constructor(
     activity: Activity,

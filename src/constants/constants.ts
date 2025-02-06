@@ -17,7 +17,7 @@ export enum ActivityStatusEnum {
 
 export enum TemperatureStandardEnum {
   LOW = 12,
-  HIGH = 26,
+  HIGH = 29,
 }
 
 export const DEFAULT_THICKNESS = 0.18;

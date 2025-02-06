@@ -16,6 +16,15 @@ export interface WallImplementationInterface {
   ceiling: ApartmentWall;
 }
 
+interface directionIDs {
+  right: string;
+  left: string;
+  front: string;
+  back: string;
+  floor: string;
+  ceiling: string;
+}
+
 export class Apartment {
   id: string;
   number: number;
@@ -23,8 +32,16 @@ export class Apartment {
   residents: People[];
   code: string;
   livingStatus: ApartmentLivingStatus;
-  temperature: number = 0;
+  temperature: number = DEFAULT_INTERNAL_TEMPERATURE;
   walls: WallImplementationInterface;
+  neighbors: directionIDs = {
+    right: "",
+    left: "",
+    front: "",
+    back: "",
+    floor: "",
+    ceiling: "",
+  };
 
   constructor(
     number: number,
@@ -46,76 +63,6 @@ export class Apartment {
     return (
       this.walls.right.width * this.walls.front.width * this.walls.front.width
     );
-  }
-
-  calculateInternalTemperature(
-    externalTemperature: number,
-    time: number
-  ): Apartment {
-    const initialInternalTemperature = this.temperature;
-    let totalTemperature = 0;
-    let wallCount = 0;
-
-    for (const key in this.walls) {
-      if (Object.prototype.hasOwnProperty.call(this.walls, key)) {
-        const wall = this.walls[key as keyof WallImplementationInterface];
-        const wallTemperature = wall.calculateTemperatureByRadiation(
-          externalTemperature,
-          initialInternalTemperature,
-          time
-        );
-        totalTemperature += wallTemperature;
-        wallCount += 1;
-      }
-    }
-
-    const averageTemperature = totalTemperature / wallCount;
-    this.temperature = Number(averageTemperature.toFixed(2));
-    return this;
-  }
-
-  calculateTemperatureWithActivities(
-    externalTemperature: number,
-    time: number
-  ): number {
-    let effectiveActivityTemperatureIncrease = 0;
-
-    this.residents.forEach((resident) => {
-      resident.activities.forEach((activity) => {
-        if (activity.status === ActivityStatusEnum.IN_PROGRESS) {
-          effectiveActivityTemperatureIncrease += activity.activity.temperature;
-        }
-      });
-    });
-
-    const totalInternalTemperatureIncrease =
-      effectiveActivityTemperatureIncrease;
-
-    const validTemperature =
-      this.temperature === 0 ? DEFAULT_INTERNAL_TEMPERATURE : this.temperature;
-
-    let resultantTemperature =
-      validTemperature + totalInternalTemperatureIncrease;
-
-    // Recalcula temperatura considerando radiación
-    for (const wallDirection in this.walls) {
-      const wall =
-        this.walls[wallDirection as keyof WallImplementationInterface];
-      resultantTemperature = wall.calculateTemperatureByRadiation(
-        externalTemperature,
-        resultantTemperature,
-        time
-      );
-    }
-
-    this.temperature = Number(resultantTemperature.toFixed(2));
-    console.log(
-      "🚀 ~ Apartment ~ resultantTemperature:",
-      this.code,
-      resultantTemperature
-    );
-
-    return Number(resultantTemperature.toFixed(2));
   }
 }
 

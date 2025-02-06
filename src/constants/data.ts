@@ -100,15 +100,30 @@ const peopleActivities: PeopleActivity[] = getPeopleActivities([
     moment().add(100, "minute").toString(),
     ActivityStatusEnum.UNKOWN
   ),
+  new PeopleActivity(
+    activities[1],
+    moment().add(500, "minute").toString(),
+    ActivityStatusEnum.UNKOWN
+  ),
+  new PeopleActivity(
+    activities[3],
+    moment().add(700, "minute").toString(),
+    ActivityStatusEnum.UNKOWN
+  ),
+  new PeopleActivity(
+    activities[2],
+    moment().add(800, "minute").toString(),
+    ActivityStatusEnum.UNKOWN
+  ),
 ]);
 
 const wall = new Wall(materials[0], 30);
 const sampleWall = new ApartmentWall([], wall, WallType.FLOOR_CEILING);
 
 const people: People[] = [
-  new People("John Doe", 30, [peopleActivities[0]]),
+  new People("John Doe", 30, [peopleActivities[0], peopleActivities[4]]),
   new People("Jane Doe", 25, [peopleActivities[1]]),
-  new People("Jhonny Doe", 35, [peopleActivities[2]]),
+  new People("Jhonny Doe", 35, [peopleActivities[2], peopleActivities[5]]),
   new People("Janet Doe", 40, [peopleActivities[3]]),
 ];
 

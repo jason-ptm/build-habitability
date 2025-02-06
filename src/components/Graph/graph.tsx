@@ -23,10 +23,9 @@ export const Graph: FC = () => {
   }, []);
 
   useEffect(() => {
-    const calculatedApartments = build.calculateTemperaturesForTime(
-      timer.time,
-      graph.temperature,
-      build.poblateBuilding(apartments, peopleActivities)
+    const calculatedApartments = build.caclulateApartmentsTemperature(
+      build.poblateBuilding(apartments, peopleActivities),
+      graph.temperature
     );
     const { nodes, links } = getNodesAndLinks(calculatedApartments);
     dispatch({
