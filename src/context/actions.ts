@@ -28,6 +28,7 @@ export const triggerActionStart = (
 export const getGraphData = (
   nodes: NodeInterface[],
   links: LinkInterface[],
+  temperature: number,
   dispatch: Dispatch<ActionType>
 ) => {
   fetch("http://127.0.0.1:5000/", {
@@ -35,7 +36,7 @@ export const getGraphData = (
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ nodes, links }),
+    body: JSON.stringify({ nodes, links, temperature }),
   }).then(async (response) => {
     const data = await response.json();
 

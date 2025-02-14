@@ -2,33 +2,32 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import igraph as ig
 import plotly.graph_objs as go
+import re
 
-app = Flask(__name__)
+app = Flask(_name_)
 CORS(app, resources={r"/": {"origins": ["http://localhost:3000", "http://localhost:5173"]}})
 
 @app.route('/', methods=['POST'])
 def graph():
-    # Esperamos recibir el cuerpo de la solicitud JSON con 'nodes' y 'links'
     content = request.json
     nodes = content.get('nodes', [])
     links = content.get('links', [])
+    reference_temperature = content.get('temperature', 25)  # Default reference temperature
 
-    # Construcción de la red
     N = len(nodes)
     L = len(links)
     Edges = [(link['source'], link['target']) for link in links]
 
     G = ig.Graph(Edges, directed=False)
-
     labels = [node['name'] for node in nodes]
     group = [node['group'] for node in nodes]
 
     layt = G.layout('kk', dim=3)
 
-    Xn = [layt[k][0] for k in range(N)]  # Coordenadas X de los nodos
-    Yn = [layt[k][1] for k in range(N)]  # Coordenadas Y
-    Zn = [layt[k][2] for k in range(N)]  # Coordenadas Z
-    Xe = []  # Coordenadas X para las aristas
+    Xn = [layt[k][0] for k in range(N)]
+    Yn = [layt[k][1] for k in range(N)]
+    Zn = [layt[k][2] for k in range(N)]
+    Xe = []
     Ye = []
     Ze = []
     for e in Edges:
@@ -67,13 +66,52 @@ def graph():
     )
 
     fig = go.Figure(data=[trace1, trace2], layout=layout)
+    messages = []
+    all_group_3_or_1 = True
+
+    # Procesar cada nodo para obtener la temperatura y generar mensajes
+    for i, node in enumerate(nodes):
+        if 'name' not in node or 'group' not in node:
+            print(f"Node missing expected properties: {node}")
+            continue
+        
+        name = node['name']
+        match = re.match(r"(\d+)\s*-\s*(-?\d+\.\d+)°C", name)
+        if not match:
+            print(f"No match for node name: {name}")
+            continue
+
+        apt_code, temperature = match.groups()
+        temperature = float(temperature)
+        node_group = node['group']
+
+        # Imprime el grupo y nombre para cada nodo para la depuración
+        print(f"Processing node: Name='{name}', Group={node_group}")
+
+        # Verificación de todos los grupos 1 o 3
+        if node_group not in (1, 3):
+            all_group_3_or_1 = False
+
+        # Implementar la lógica para los mensajes
+        if node_group == 3:
+            if 0 <= (temperature - reference_temperature) <= 3:
+                messages.append(f"{apt_code} se recomienda posponer actividades mientras disminuye la temperatura")
+
+            neighbor_indices = G.neighbors(i)
+            neighbor_groups = [group[j] for j in neighbor_indices]
+            if neighbor_groups.count(3) >= 2:
+                messages.append(f"{apt_code} se recomienda poner aislante en las paredes con los apartamentos vecinos")
+
+    if all_group_3_or_1:
+        messages.append("Se recomienda implantar aislantes térmicos o calefacción")
 
     response_data = {
         'data': [trace1.to_plotly_json(), trace2.to_plotly_json()],
-        'layout': layout.to_plotly_json()
+        'layout': layout.to_plotly_json(),
+        'messages': messages
     }
 
     return jsonify(response_data)
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     app.run(debug=True)

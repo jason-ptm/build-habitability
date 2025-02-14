@@ -32,8 +32,8 @@ export const reducer = (state: StateInterface, action: ActionType) => {
       };
     }
     case "FETCH_GRAPH_DATA": {
-      const { nodes, links, dispatch } = action.payload;
-      getGraphData(nodes, links, dispatch);
+      const { nodes, links, temperature, dispatch } = action.payload;
+      getGraphData(nodes, links, temperature, dispatch);
       return {
         ...state,
       };
@@ -41,6 +41,7 @@ export const reducer = (state: StateInterface, action: ActionType) => {
     case "ADD_GRAPH_DATA": {
       return {
         ...state,
+        messages: action.payload.messages,
         graph: {
           ...state.graph,
           data: action.payload.data,

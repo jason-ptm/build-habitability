@@ -26,6 +26,7 @@ export interface StateInterface {
   peopleActivities: PeopleActivity[];
   timer: TimerInterface;
   graph: GraphInterface;
+  messages: string[];
 }
 
 interface ProviderProps {
@@ -55,6 +56,7 @@ export type ActionType =
       payload: {
         nodes: NodeInterface[];
         links: LinkInterface[];
+        temperature: number;
         dispatch: Dispatch<ActionType>;
       };
     }

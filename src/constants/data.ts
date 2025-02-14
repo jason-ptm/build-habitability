@@ -92,27 +92,27 @@ const peopleActivities: PeopleActivity[] = getPeopleActivities([
   ),
   new PeopleActivity(
     activities[2],
-    moment().add(200, "minute").toString(),
+    moment().add(1100, "minute").toString(),
     ActivityStatusEnum.UNKOWN
   ),
   new PeopleActivity(
     activities[3],
-    moment().add(100, "minute").toString(),
+    moment().add(1200, "minute").toString(),
     ActivityStatusEnum.UNKOWN
   ),
   new PeopleActivity(
     activities[1],
-    moment().add(500, "minute").toString(),
+    moment().add(1000, "minute").toString(),
     ActivityStatusEnum.UNKOWN
   ),
   new PeopleActivity(
     activities[3],
-    moment().add(700, "minute").toString(),
+    moment().add(1060, "minute").toString(),
     ActivityStatusEnum.UNKOWN
   ),
   new PeopleActivity(
     activities[2],
-    moment().add(800, "minute").toString(),
+    moment().add(900, "minute").toString(),
     ActivityStatusEnum.UNKOWN
   ),
 ]);
@@ -124,16 +124,17 @@ const people: People[] = [
   new People("John Doe", 30, [peopleActivities[0], peopleActivities[4]]),
   new People("Jane Doe", 25, [peopleActivities[1]]),
   new People("Jhonny Doe", 35, [peopleActivities[2], peopleActivities[5]]),
-  new People("Janet Doe", 40, [peopleActivities[3]]),
+  new People("Janet Doe", 40, [peopleActivities[3], peopleActivities[6]]),
 ];
 
 export const APP_DATA: StateInterface = {
   timer: {
-    startTime: moment().toString(),
+    startTime: moment().add(12, 'hours').toString(),
     minutesPerSecond: 1,
     paused: false,
     time: 0,
   },
+  messages: [],
   graph: {
     data: {},
     layout: {},

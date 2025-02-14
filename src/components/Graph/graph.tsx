@@ -3,6 +3,7 @@ import { FC, useEffect } from "react";
 import Plot from "react-plotly.js";
 import { useAppContext } from "../../context/hooks";
 import { getNodesAndLinks } from "../../utils/graph";
+import { AlertList } from "../Alert";
 
 export const Graph: FC = () => {
   const { dispatch, graph, build, apartments, timer, peopleActivities } =
@@ -17,6 +18,7 @@ export const Graph: FC = () => {
       payload: {
         nodes,
         links,
+        temperature: graph.temperature,
         dispatch,
       },
     });
@@ -33,14 +35,18 @@ export const Graph: FC = () => {
       payload: {
         nodes,
         links,
+        temperature: graph.temperature,
         dispatch,
       },
     });
   }, [peopleActivities, graph.temperature]);
 
   return (
-    <Box sx={{ flexBasis: "100%", height: "100%", overflow: "auto" }}>
-      <Plot data={graph.data} layout={graph.layout}></Plot>
-    </Box>
+    <>
+      <Box sx={{ flexBasis: "100%", height: "100%", overflow: "auto" }}>
+        <Plot data={graph.data} layout={graph.layout}></Plot>
+      </Box>
+      <AlertList />
+    </>
   );
 };
